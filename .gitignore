@@ -1,0 +1,5 @@
+bin/
+demo/
+*.out
+.vscode/
+*.test

@@ -1,0 +1,63 @@
+# Copyright (c) 2023, Intel Corporation.
+# SPDX-License-Identifier: BSD-3-Clause
+
+run:
+  skip-dirs:
+    - "demo"
+    - "bin"
+    - "examples.*"
+linters:
+  fast: false
+  enable:
+    - revive
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - asciicheck
+    - whitespace
+    - wastedassign
+    - unparam
+    - unconvert
+    - tagliatelle
+    - stylecheck
+    - reassign
+    - predeclared
+    - prealloc
+    - misspell
+    - makezero
+    - exhaustive
+    - lll
+issues:
+  exclude-use-default: false
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    ignore: fmt:.*,Close
+  stylecheck:
+    checks: ["all"]
+  revive:
+    confidence:  0.8
+    severity: error
+    rules:
+      - name: package-comments
+        severity: "error"
+      - name: max-public-structs
+        severity: "error"
+        arguments: [6]
+      - name: exported
+        severity: error
+        arguments:
+          - "checkPrivateReceivers"
+          - "sayRepetitiveInsteadOfStutters"
+  exhaustive:
+    default-signifies-exhaustive: true
+
+  tagliatelle:
+    case:
+      use-field-name: true
+      rules:
+        json: goCamel

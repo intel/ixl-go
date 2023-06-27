@@ -1,6 +1,5 @@
-# Intel Accelerators User Library for Go
---- 
-[![Coverage Status](./coverage.svg)]()
+Intel Accelerators User Library for Go
+============================================
 
 The project is aimed to develop Go library of IAA/DSA to empower cloud native industry. IAA/DSA is introduced by 4th Gen Intel(R) Xeon(R) Scalable Processor which was launched on Jan'23.
 

@@ -83,6 +83,16 @@ func (i *Inflate) Read(data []byte) (n int, err error) {
 			return 0, err
 		}
 	}
+
+	if i.remnant == 0 && i.state == last && len(data) == 0 {
+		i.finished = true
+		return 0, io.EOF
+	}
+
+	if len(data) == 0 {
+		return 0, nil
+	}
+
 	input := i.buffer[:i.remnant]
 	i.cr.Reset()
 	i.desc.Reset()
@@ -126,6 +136,8 @@ const (
 	last   streamState = 2
 )
 
+var emptyBlock = make([]byte, 1)
+
 func (i *Inflate) decompressJob(block []byte, output []byte, aesc *iaa.DecompressAECS) {
 	d := &i.desc
 	d.SetOpcode(iaa.OpDecompress)
@@ -157,15 +169,17 @@ func (i *Inflate) decompressJob(block []byte, output []byte, aesc *iaa.Decompres
 	)
 
 	if len(block) == 0 {
-		block = block[:1]
-		d.Src1Addr = uintptr(unsafe.Pointer(&block[0]))
+		d.Src1Addr = uintptr(unsafe.Pointer(&emptyBlock[0]))
 		d.Size = 0
 	} else {
 		d.Src1Addr = uintptr(unsafe.Pointer(&block[0]))
 		d.Size = uint32(len(block))
 	}
-
-	d.DestAddr = uintptr(unsafe.Pointer(&output[0]))
+	if len(output) == 0 {
+		d.DestAddr = uintptr(unsafe.Pointer(&emptyBlock[0]))
+	} else {
+		d.DestAddr = uintptr(unsafe.Pointer(&output[0]))
+	}
 	d.MaxDestionationSize = uint32(len(output))
 
 	d.Src2Addr = uintptr(unsafe.Pointer(aesc))

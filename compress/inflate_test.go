@@ -54,6 +54,40 @@ func TestInflate(t *testing.T) {
 	}
 }
 
+func TestInflateReadZeroLengthData(t *testing.T) {
+	if !Ready() {
+		t.Skip("IAA devices not found")
+	}
+	compressed := bytes.NewBuffer(nil)
+	w, err := NewDeflate(compressed)
+	if err != nil {
+		t.Skip(err)
+	}
+	_, err = w.ReadFrom(io.LimitReader(rand.Reader, 1024))
+	if err != nil && err != io.EOF {
+		t.Fatal(err)
+	}
+	w.Close()
+
+	r, err := NewInflate(compressed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := make([]byte, 1024)
+	_, err = r.Read(data[:0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = r.Read(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = r.Read(nil)
+	if err != nil && err != io.EOF {
+		t.Fatal(err)
+	}
+}
+
 func FuzzInflate(f *testing.F) {
 	if !Ready() {
 		f.Skip("IAA devices not found")

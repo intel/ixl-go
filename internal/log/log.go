@@ -34,7 +34,7 @@ func init() {
 // Debug prints debug level logs
 func Debug(format string, args ...interface{}) {
 	if level >= lvlDebug {
-		log.Printf("[ixl-go]DEBG"+format, args...)
+		log.Printf("[ixl-go]DEBG "+format, args...)
 	}
 }
 

@@ -97,11 +97,11 @@ func BenchmarkReusedRandomTextCompress(b *testing.B) {
 				fw.Close()
 			}
 		})
-		w, _ := NewDeflate(io.Discard)
+		w, _ := NewDeflateWriter(io.Discard)
 		b.Run(fmt.Sprintf("IAA deflate[%dk]", i), func(b *testing.B) {
 			for j := 0; j < b.N; j++ {
 				w.Reset(io.Discard)
-				_, _ = w.ReadFrom(bytes.NewBuffer(text))
+				_, _ = w.Write(text)
 				w.Close()
 			}
 		})
@@ -123,11 +123,10 @@ func BenchmarkRandomTextCompress(b *testing.B) {
 		})
 		b.Run(fmt.Sprintf("IAA deflate[%dk]", i), func(b *testing.B) {
 			for j := 0; j < b.N; j++ {
-				w, _ := NewDeflate(io.Discard)
-				_, _ = w.ReadFrom(bytes.NewBuffer(text))
+				w, _ := NewDeflateWriter(io.Discard)
+				_, _ = w.Write(text)
 				w.Close()
 			}
 		})
 	}
 }
-

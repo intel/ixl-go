@@ -127,8 +127,7 @@ func FuzzWriterWrite(f *testing.F) {
 	}
 	f.Fuzz(func(t *testing.T, data []byte) {
 		buf := bytes.NewBuffer(nil)
-		d, _ := NewDeflate(buf)
-		w := NewWriter(d)
+		w, _ := NewDeflateWriter(buf)
 		_, err := w.Write(data)
 		if err != nil {
 			t.Fatal(err)

@@ -195,7 +195,7 @@ Then, use the command below to check whether the workqueues have been configured
 accel-config list
 ```
 
-And, the most common issue caused by the application is not running under root permission.
+And the most common reason for the problem is that the application is not running as root, try again with `sudo`. 
 
 By default, DSA and IAA workqueues must be used under root permission.
 

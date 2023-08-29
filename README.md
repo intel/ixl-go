@@ -189,6 +189,11 @@ There are several reasons for this:
 
 First, please check your CPU platform, make sure you have IAA or DSA devices.
 
+```shell
+ls -df /sys/bus/dsa/devices/dsa* # lists all DSA devices if present. Only <path>/dsa<id> are devices.
+ls -df /sys/bus/dsa/devices/iax* # lists all IAA devices if present.
+```
+
 Then, use the command below to check whether the workqueues have been configured.
 
 ```shell

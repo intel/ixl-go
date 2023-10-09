@@ -18,7 +18,7 @@ Package datamove provides functions which leverages DSA hardware abilities to co
   - [func (c *Context) CopyCheckError(dest, src []byte) error](<#func-context-copycheckerror>)
 
 
-## func Copy
+## func [Copy](<https://github.com/intel/ixl-go/blob/main/datamove/ctx.go#L25>)
 
 ```go
 func Copy(dst []byte, src []byte) (ok bool)
@@ -26,7 +26,7 @@ func Copy(dst []byte, src []byte) (ok bool)
 
 Copy copies the content of the source byte slice to the destination byte slice. It returns true if the copy operation is successful, and false otherwise.
 
-## func Ready
+## func [Ready](<https://github.com/intel/ixl-go/blob/main/datamove/ctx.go#L119>)
 
 ```go
 func Ready() bool
@@ -34,7 +34,7 @@ func Ready() bool
 
 Ready returns true if the device is ready for use.
 
-## type Context
+## type [Context](<https://github.com/intel/ixl-go/blob/main/datamove/ctx.go#L52-L55>)
 
 Context represents a context for a memory copy operation. It should be reset before each use. It must be created by NewContext.
 
@@ -44,7 +44,7 @@ type Context struct {
 }
 ```
 
-### func NewContext
+### func [NewContext](<https://github.com/intel/ixl-go/blob/main/datamove/ctx.go#L45>)
 
 ```go
 func NewContext() *Context
@@ -52,7 +52,7 @@ func NewContext() *Context
 
 NewContext creates a new context. The context should be reused if possible.
 
-### func \(\*Context\) Copy
+### func \(\*Context\) [Copy](<https://github.com/intel/ixl-go/blob/main/datamove/ctx.go#L65>)
 
 ```go
 func (c *Context) Copy(dest, src []byte) bool
@@ -60,7 +60,7 @@ func (c *Context) Copy(dest, src []byte) bool
 
 Copy copies the content of the source byte slice to the destination byte slice. It returns true if the copy operation is successful, and false otherwise.
 
-### func \(\*Context\) CopyCheckError
+### func \(\*Context\) [CopyCheckError](<https://github.com/intel/ixl-go/blob/main/datamove/ctx.go#L71>)
 
 ```go
 func (c *Context) CopyCheckError(dest, src []byte) error

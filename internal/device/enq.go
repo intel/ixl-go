@@ -27,6 +27,7 @@ type Context struct {
 }
 type submitter interface {
 	Submit(desc uintptr, comp *CompletionRecordHeader) (status uint8)
+	SubmitBusyPoll(desc uintptr, comp *CompletionRecordHeader) (status uint8)
 }
 
 // CreateContext creates a new context instance given the device type.
@@ -124,11 +125,12 @@ func (c *Context) Submit(desc uintptr, comp *CompletionRecordHeader) uint8 {
 	return c.processors[idx].Submit(desc, comp)
 }
 
-// SubmitQuick submits a new quick request with the given descriptor and completion record header.
-// func (c *Context) SubmitQuick(desc uintptr, comp *CompletionRecordHeader) uint8 {
-// 	idx := int(atomic.AddUint64(&c.queue, 1) % uint64(len(c.processors)))
-// 	return c.processors[idx].SubmitQuick(desc, comp)
-// }
+// SubmitBusyPoll submits a new quick request with the given descriptor and completion record header.
+// This method may cause higher CPU cost.
+func (c *Context) SubmitBusyPoll(desc uintptr, comp *CompletionRecordHeader) uint8 {
+	idx := int(atomic.AddUint64(&c.queue, 1) % uint64(len(c.processors)))
+	return c.processors[idx].SubmitBusyPoll(desc, comp)
+}
 
 // initWQRegister initializes a new work queue register.
 func initWQRegister(fd int) ([]byte, error) {
@@ -160,7 +162,7 @@ type dwqSubmitter struct {
 	register []byte
 }
 
-// Submit submits a new request with the given descriptor and completion record header.
+// Submit submits a new request with the given descriptor and completion record header and wait the result.
 func (p *dwqSubmitter) Submit(desc uintptr, comp *CompletionRecordHeader) (status uint8) {
 	// clear status
 	comp.ComplexStatus = 0
@@ -189,6 +191,29 @@ func (p *dwqSubmitter) Submit(desc uintptr, comp *CompletionRecordHeader) (statu
 	}
 }
 
+// SubmitBusyPoll submits a new request with the given descriptor and completion record header
+// and wait the result by busy-polling.
+// This method may cause higher CPU cost.
+func (p *dwqSubmitter) SubmitBusyPoll(desc uintptr, comp *CompletionRecordHeader) (status uint8) {
+	// clear status
+	comp.ComplexStatus = 0
+	uip := (*uint64)(unsafe.Pointer(comp))
+	for {
+		s := p.sem.Load()
+		if s >= p.max {
+			runtime.Gosched()
+			continue
+		}
+		if p.sem.CompareAndSwap(s, s+1) {
+			break
+		}
+	}
+	movdir64b(&p.register[0], desc)
+	status = waitForComplete(uip)
+	p.sem.Add(-1)
+	return status
+}
+
 // swqSubmitter represents a swqSubmitter of the context.
 type swqSubmitter struct {
 	register []byte // Register.
@@ -201,8 +226,10 @@ func newSWQSubmitter(register []byte) (p *swqSubmitter) {
 	return p
 }
 
-// SubmitQuick submits a new quick request with the given descriptor and completion record header.
-func (p *swqSubmitter) SubmitQuick(desc uintptr, comp *CompletionRecordHeader) (status uint8) {
+// SubmitBusyPoll submits a new request with the given descriptor and completion record header
+// and wait the result by busy-polling.
+// This method may cause higher CPU cost.
+func (p *swqSubmitter) SubmitBusyPoll(desc uintptr, comp *CompletionRecordHeader) (status uint8) {
 	// clear status
 	comp.ComplexStatus = 0
 
@@ -211,10 +238,11 @@ func (p *swqSubmitter) SubmitQuick(desc uintptr, comp *CompletionRecordHeader) (
 	if ret {
 		panic("unexpected ENQCMD return value")
 	}
-	return waitForComplete(uip)
+	status = waitForComplete(uip)
+	return status
 }
 
-// Submit submits a new request with the given descriptor and completion record header.
+// Submit submits a new request with the given descriptor and completion record header and wait the result.
 func (p *swqSubmitter) Submit(desc uintptr, comp *CompletionRecordHeader) (status uint8) {
 	// clear status
 	comp.ComplexStatus = 0

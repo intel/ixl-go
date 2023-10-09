@@ -25,7 +25,7 @@ import (
 
 func main() {
 	input := make([]byte, 1024)
-	rand.Read(input)
+	_, _ = rand.Read(input)
 	var w io.WriteCloser
 	d, err := compress.NewDeflate(bytes.NewBuffer(nil))
 	if err != nil {
@@ -33,8 +33,8 @@ func main() {
 		log.Fatalln(err)
 	}
 	w = compress.NewWriter(d)
-	w.Write(input)
-	w.Close()
+	_, _ = w.Write(input)
+	_ = w.Close()
 }
 ```
 
@@ -43,44 +43,40 @@ func main() {
 
 ## Index
 
-- [Variables](<#variables>)
 - [func Ready() bool](<#func-ready>)
 - [type BufWriter](<#type-bufwriter>)
+  - [func NewDeflateWriter(w io.Writer, opts ...Option) (*BufWriter, error)](<#func-newdeflatewriter>)
+  - [func NewGzipWriter(w io.Writer, opts ...Option) *BufWriter](<#func-newgzipwriter>)
   - [func NewWriter(bw blockWriter) *BufWriter](<#func-newwriter>)
   - [func (w *BufWriter) Close() error](<#func-bufwriter-close>)
   - [func (w *BufWriter) Flush() error](<#func-bufwriter-flush>)
   - [func (w *BufWriter) Reset(writer io.Writer)](<#func-bufwriter-reset>)
   - [func (w *BufWriter) Write(data []byte) (n int, err error)](<#func-bufwriter-write>)
 - [type Deflate](<#type-deflate>)
-  - [func NewDeflate(w io.Writer) (*Deflate, error)](<#func-newdeflate>)
+  - [func NewDeflate(w io.Writer, opts ...Option) (*Deflate, error)](<#func-newdeflate>)
   - [func (d *Deflate) Close() error](<#func-deflate-close>)
   - [func (d *Deflate) ReadFrom(r io.Reader) (total int64, err error)](<#func-deflate-readfrom>)
   - [func (d *Deflate) Reset(w io.Writer)](<#func-deflate-reset>)
 - [type Gzip](<#type-gzip>)
-  - [func NewGzip(w io.Writer) *Gzip](<#func-newgzip>)
+  - [func NewGzip(w io.Writer, opts ...Option) *Gzip](<#func-newgzip>)
   - [func (g *Gzip) Close() error](<#func-gzip-close>)
   - [func (g *Gzip) ReadFrom(reader io.Reader) (n int64, err error)](<#func-gzip-readfrom>)
   - [func (g *Gzip) Reset(w io.Writer)](<#func-gzip-reset>)
 - [type Header](<#type-header>)
 - [type Inflate](<#type-inflate>)
-  - [func NewInflate(r io.Reader) (*Inflate, error)](<#func-newinflate>)
-  - [func NewInflateWithBufferSize(r io.Reader, bufferSize int) (*Inflate, error)](<#func-newinflatewithbuffersize>)
+  - [func NewInflate(r io.Reader, opts ...Option) (*Inflate, error)](<#func-newinflate>)
+  - [func NewInflateWithBufferSize(r io.Reader, bufferSize int, opts ...Option) (*Inflate, error)](<#func-newinflatewithbuffersize>)
+  - [func (i *Inflate) DecompressAll(compressed []byte, raw []byte) (int, error)](<#func-inflate-decompressall>)
   - [func (i *Inflate) Read(data []byte) (n int, err error)](<#func-inflate-read>)
   - [func (i *Inflate) Reset(r io.Reader)](<#func-inflate-reset>)
+- [type Option](<#type-option>)
+  - [func BusyPoll() Option](<#func-busypoll>)
+  - [func DynamicMode() Option](<#func-dynamicmode>)
+  - [func FixedMode() Option](<#func-fixedmode>)
+  - [func HuffmanOnly() Option](<#func-huffmanonly>)
 
 
-## Variables
-
-```go
-var (
-    // ErrNonLatin1Header means the header string should be Latin-1 encoded.
-    ErrNonLatin1Header = errors.New("gzip: non-Latin-1 header string")
-    // ErrZeroByte means the header string must not contains any zero byte.
-    ErrZeroByte = errors.New("gzip: header string contains zero byte")
-)
-```
-
-## func Ready
+## func [Ready](<https://github.com/intel/ixl-go/blob/main/compress/ctx.go#L11>)
 
 ```go
 func Ready() bool
@@ -88,7 +84,7 @@ func Ready() bool
 
 Ready checks if the hardware is usable.
 
-## type BufWriter
+## type [BufWriter](<https://github.com/intel/ixl-go/blob/main/compress/writer.go#L15-L19>)
 
 BufWriter is a buffer writer for wrapping Deflate/Gzip as a io.Writer.
 
@@ -98,7 +94,23 @@ type BufWriter struct {
 }
 ```
 
-### func NewWriter
+### func [NewDeflateWriter](<https://github.com/intel/ixl-go/blob/main/compress/writer.go#L88>)
+
+```go
+func NewDeflateWriter(w io.Writer, opts ...Option) (*BufWriter, error)
+```
+
+NewDeflateWriter create a deflate writer
+
+### func [NewGzipWriter](<https://github.com/intel/ixl-go/blob/main/compress/writer.go#L97>)
+
+```go
+func NewGzipWriter(w io.Writer, opts ...Option) *BufWriter
+```
+
+NewGzipWriter create a gzip writer
+
+### func [NewWriter](<https://github.com/intel/ixl-go/blob/main/compress/writer.go#L29>)
 
 ```go
 func NewWriter(bw blockWriter) *BufWriter
@@ -106,7 +118,7 @@ func NewWriter(bw blockWriter) *BufWriter
 
 NewWriter create a new BufWriter. The argument should be Gzip or Deflate.
 
-### func \(\*BufWriter\) Close
+### func \(\*BufWriter\) [Close](<https://github.com/intel/ixl-go/blob/main/compress/writer.go#L74>)
 
 ```go
 func (w *BufWriter) Close() error
@@ -114,7 +126,7 @@ func (w *BufWriter) Close() error
 
 Close flush all buffered data to underlying block writer and close it.
 
-### func \(\*BufWriter\) Flush
+### func \(\*BufWriter\) [Flush](<https://github.com/intel/ixl-go/blob/main/compress/writer.go#L67>)
 
 ```go
 func (w *BufWriter) Flush() error
@@ -122,7 +134,7 @@ func (w *BufWriter) Flush() error
 
 Flush immediately write all buffered data to underlying block writer.
 
-### func \(\*BufWriter\) Reset
+### func \(\*BufWriter\) [Reset](<https://github.com/intel/ixl-go/blob/main/compress/writer.go#L37>)
 
 ```go
 func (w *BufWriter) Reset(writer io.Writer)
@@ -130,7 +142,7 @@ func (w *BufWriter) Reset(writer io.Writer)
 
 Reset writer.
 
-### func \(\*BufWriter\) Write
+### func \(\*BufWriter\) [Write](<https://github.com/intel/ixl-go/blob/main/compress/writer.go#L43>)
 
 ```go
 func (w *BufWriter) Write(data []byte) (n int, err error)
@@ -138,7 +150,7 @@ func (w *BufWriter) Write(data []byte) (n int, err error)
 
 Write data to underlying block writer.
 
-## type Deflate
+## type [Deflate](<https://github.com/intel/ixl-go/blob/main/compress/deflate.go#L39-L63>)
 
 Deflate takes data written to it and writes the deflate compressed form of that data to an underlying writer \(see NewDeflate\).
 
@@ -152,15 +164,15 @@ type Deflate struct {
 }
 ```
 
-### func NewDeflate
+### func [NewDeflate](<https://github.com/intel/ixl-go/blob/main/compress/deflate.go#L105>)
 
 ```go
-func NewDeflate(w io.Writer) (*Deflate, error)
+func NewDeflate(w io.Writer, opts ...Option) (*Deflate, error)
 ```
 
 NewDeflate returns a new Deflate writing compressed data to underlying writer \`w\`.
 
-### func \(\*Deflate\) Close
+### func \(\*Deflate\) [Close](<https://github.com/intel/ixl-go/blob/main/compress/deflate.go#L428>)
 
 ```go
 func (d *Deflate) Close() error
@@ -168,7 +180,7 @@ func (d *Deflate) Close() error
 
 Close the underlying writer.
 
-### func \(\*Deflate\) ReadFrom
+### func \(\*Deflate\) [ReadFrom](<https://github.com/intel/ixl-go/blob/main/compress/deflate.go#L159>)
 
 ```go
 func (d *Deflate) ReadFrom(r io.Reader) (total int64, err error)
@@ -176,7 +188,7 @@ func (d *Deflate) ReadFrom(r io.Reader) (total int64, err error)
 
 ReadFrom reads all data from \`r\` and compresses the data and then writes compressed data into underlying writer \`w\`.
 
-### func \(\*Deflate\) Reset
+### func \(\*Deflate\) [Reset](<https://github.com/intel/ixl-go/blob/main/compress/deflate.go#L148>)
 
 ```go
 func (d *Deflate) Reset(w io.Writer)
@@ -184,7 +196,7 @@ func (d *Deflate) Reset(w io.Writer)
 
 Reset the \`Deflate\` object.
 
-## type Gzip
+## type [Gzip](<https://github.com/intel/ixl-go/blob/main/compress/gzip.go#L19-L29>)
 
 Gzip is an object to hold the state for compress data using gzip format.
 
@@ -196,15 +208,15 @@ type Gzip struct {
 }
 ```
 
-### func NewGzip
+### func [NewGzip](<https://github.com/intel/ixl-go/blob/main/compress/gzip.go#L34>)
 
 ```go
-func NewGzip(w io.Writer) *Gzip
+func NewGzip(w io.Writer, opts ...Option) *Gzip
 ```
 
 NewGzip create a new Gzip.
 
-### func \(\*Gzip\) Close
+### func \(\*Gzip\) [Close](<https://github.com/intel/ixl-go/blob/main/compress/gzip.go#L220>)
 
 ```go
 func (g *Gzip) Close() error
@@ -212,7 +224,7 @@ func (g *Gzip) Close() error
 
 Close the writer.
 
-### func \(\*Gzip\) ReadFrom
+### func \(\*Gzip\) [ReadFrom](<https://github.com/intel/ixl-go/blob/main/compress/gzip.go#L178>)
 
 ```go
 func (g *Gzip) ReadFrom(reader io.Reader) (n int64, err error)
@@ -220,7 +232,7 @@ func (g *Gzip) ReadFrom(reader io.Reader) (n int64, err error)
 
 ReadFrom reads all data from \`r\` and compresses the data and then writes compressed data into underlying writer \`w\`.
 
-### func \(\*Gzip\) Reset
+### func \(\*Gzip\) [Reset](<https://github.com/intel/ixl-go/blob/main/compress/gzip.go#L209>)
 
 ```go
 func (g *Gzip) Reset(w io.Writer)
@@ -228,7 +240,7 @@ func (g *Gzip) Reset(w io.Writer)
 
 Reset the internal states for reusing the object.
 
-## type Header
+## type [Header](<https://github.com/intel/ixl-go/blob/main/compress/gzip.go#L16>)
 
 Header is same as gzip.Header
 
@@ -236,7 +248,7 @@ Header is same as gzip.Header
 type Header = gzip.Header
 ```
 
-## type Inflate
+## type [Inflate](<https://github.com/intel/ixl-go/blob/main/compress/inflate.go#L23-L36>)
 
 Inflate reads data from reader r and decompresses them.
 
@@ -248,23 +260,31 @@ type Inflate struct {
 }
 ```
 
-### func NewInflate
+### func [NewInflate](<https://github.com/intel/ixl-go/blob/main/compress/inflate.go#L39>)
 
 ```go
-func NewInflate(r io.Reader) (*Inflate, error)
+func NewInflate(r io.Reader, opts ...Option) (*Inflate, error)
 ```
 
 NewInflate creates a new Inflate with 4KB buffer size to decompress data from reader r.
 
-### func NewInflateWithBufferSize
+### func [NewInflateWithBufferSize](<https://github.com/intel/ixl-go/blob/main/compress/inflate.go#L50>)
 
 ```go
-func NewInflateWithBufferSize(r io.Reader, bufferSize int) (*Inflate, error)
+func NewInflateWithBufferSize(r io.Reader, bufferSize int, opts ...Option) (*Inflate, error)
 ```
 
 NewInflateWithBufferSize creates a new Inflate with specified buffer size to decompress data from reader r.
 
-### func \(\*Inflate\) Read
+### func \(\*Inflate\) [DecompressAll](<https://github.com/intel/ixl-go/blob/main/compress/inflate.go#L91>)
+
+```go
+func (i *Inflate) DecompressAll(compressed []byte, raw []byte) (int, error)
+```
+
+DecompressAll decompress all compressed data and write result into raw. The caller should make sure that \`raw\` has enough space.
+
+### func \(\*Inflate\) [Read](<https://github.com/intel/ixl-go/blob/main/compress/inflate.go#L106>)
 
 ```go
 func (i *Inflate) Read(data []byte) (n int, err error)
@@ -272,13 +292,53 @@ func (i *Inflate) Read(data []byte) (n int, err error)
 
 Read decompressed data from the underlying compressed reader.
 
-### func \(\*Inflate\) Reset
+### func \(\*Inflate\) [Reset](<https://github.com/intel/ixl-go/blob/main/compress/inflate.go#L72>)
 
 ```go
 func (i *Inflate) Reset(r io.Reader)
 ```
 
 Reset reset the Inflate object
+
+## type [Option](<https://github.com/intel/ixl-go/blob/main/compress/deflate.go#L73>)
+
+Option type is used to configure how the library handles your compression or decompression.
+
+```go
+type Option func(opt *option)
+```
+
+### func [BusyPoll](<https://github.com/intel/ixl-go/blob/main/compress/deflate.go#L98>)
+
+```go
+func BusyPoll() Option
+```
+
+BusyPoll enable busy\-poll mode to reduce the deflate latency. Beware it may cause more CPU cost.
+
+### func [DynamicMode](<https://github.com/intel/ixl-go/blob/main/compress/deflate.go#L83>)
+
+```go
+func DynamicMode() Option
+```
+
+DynamicMode enable dynamic mode to compress the data.
+
+### func [FixedMode](<https://github.com/intel/ixl-go/blob/main/compress/deflate.go#L76>)
+
+```go
+func FixedMode() Option
+```
+
+FixedMode enable fixed mode to compress the data.
+
+### func [HuffmanOnly](<https://github.com/intel/ixl-go/blob/main/compress/deflate.go#L90>)
+
+```go
+func HuffmanOnly() Option
+```
+
+HuffmanOnly enable huffman code only mode to compress the data.
 
 
 

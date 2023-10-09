@@ -17,6 +17,9 @@ var longRand = func() []byte {
 }()
 
 func TestCopyTransferSize(t *testing.T) {
+	if !Ready() {
+		t.Skip()
+	}
 	size := globalCtx.MaxTransferSize()
 	globalCtx.SetMaxTransferSize(1024)
 	defer globalCtx.SetMaxTransferSize(size)

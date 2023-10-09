@@ -15,7 +15,7 @@ Package mem declares functions for allocating memory that is aligned to specific
 - [func Alloc64ByteAligned(size uintptr) []byte](<#func-alloc64bytealigned>)
 
 
-## func Alloc32Align
+## func [Alloc32Align](<https://github.com/intel/ixl-go/blob/main/util/mem/alloc.go#L47>)
 
 ```go
 func Alloc32Align[T any]() *T
@@ -23,7 +23,7 @@ func Alloc32Align[T any]() *T
 
 Alloc32Align returns a pointer to a value of type T that is aligned to 32 bytes. The returned pointer may point to additional unused memory to ensure alignment.
 
-## func Alloc64Align
+## func [Alloc64Align](<https://github.com/intel/ixl-go/blob/main/util/mem/alloc.go#L28>)
 
 ```go
 func Alloc64Align[T any]() *T
@@ -31,7 +31,7 @@ func Alloc64Align[T any]() *T
 
 Alloc64Align returns a pointer to a value of type T that is aligned to 64 bytes. The returned pointer may point to additional unused memory to ensure alignment.
 
-## func Alloc64ByteAligned
+## func [Alloc64ByteAligned](<https://github.com/intel/ixl-go/blob/main/util/mem/alloc.go#L13>)
 
 ```go
 func Alloc64ByteAligned(size uintptr) []byte

@@ -6,13 +6,13 @@ loop:
     // ENQCMD EAX,[EBX]
     BYTE $0xf2;BYTE $0x0f;BYTE $0x38;BYTE $0xf8;BYTE $0x03;
     // CHECK ZF
-    SETEQ AX
-    CMPB AX,$0x00
+    SETEQ CX
+    CMPB CX,$0x00
     JE finish
     PAUSE
     JMP loop
 finish:
-    MOVQ AX,c+16(FP)
+    MOVQ CX,c+16(FP)
     RET
 
 TEXT ·enqcmd(SB), $0-16

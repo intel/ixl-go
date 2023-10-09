@@ -24,15 +24,17 @@ type Gzip struct {
 	w           io.Writer
 	buf         []byte
 	sum         int64
+	opts        []Option
 	compressor  *Deflate
 }
 
 var fixedGzipHeader = [3]byte{0x1f, 0x8b, 8}
 
 // NewGzip create a new Gzip.
-func NewGzip(w io.Writer) *Gzip {
+func NewGzip(w io.Writer, opts ...Option) *Gzip {
 	g := &Gzip{Header: Header{OS: 255}, w: w}
 	g.w = w
+	g.opts = opts
 	return g
 }
 
@@ -153,7 +155,7 @@ func (g *Gzip) writeBlock(block []byte, last bool) (n int, err error) {
 		g.wroteHeader = true
 	}
 	if g.compressor == nil {
-		g.compressor, err = NewDeflate(g.w)
+		g.compressor, err = NewDeflate(g.w, g.opts...)
 		if err != nil {
 			return 0, err
 		}

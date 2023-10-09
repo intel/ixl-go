@@ -85,15 +85,15 @@ func (w *BufWriter) Close() error {
 }
 
 // NewDeflateWriter create a deflate writer
-func NewDeflateWriter(w io.Writer) (*BufWriter, error) {
-	d, err := NewDeflate(w)
+func NewDeflateWriter(w io.Writer, opts ...Option) (*BufWriter, error) {
+	d, err := NewDeflate(w, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return NewWriter(d), nil
 }
 
-// NewDeflateWriter create a gzip writer
-func NewGzipWriter(w io.Writer) *BufWriter {
-	return NewWriter(NewGzip(w))
+// NewGzipWriter create a gzip writer
+func NewGzipWriter(w io.Writer, opts ...Option) *BufWriter {
+	return NewWriter(NewGzip(w, opts...))
 }

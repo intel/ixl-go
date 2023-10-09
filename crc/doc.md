@@ -50,7 +50,7 @@ const (
 )
 ```
 
-## func Ready
+## func [Ready](<https://github.com/intel/ixl-go/blob/main/crc/ctx.go#L11>)
 
 ```go
 func Ready() bool
@@ -58,7 +58,7 @@ func Ready() bool
 
 Ready returns true if the device is ready for use.
 
-## type Calculator
+## type [Calculator](<https://github.com/intel/ixl-go/blob/main/crc/crc.go#L40-L44>)
 
 Calculator is used for CRC64 calculation Notice: the data size should be less than your device's max\_transfer\_size.
 
@@ -68,7 +68,7 @@ type Calculator struct {
 }
 ```
 
-### func NewCalculator
+### func [NewCalculator](<https://github.com/intel/ixl-go/blob/main/crc/crc.go#L47>)
 
 ```go
 func NewCalculator() (*Calculator, error)
@@ -76,7 +76,7 @@ func NewCalculator() (*Calculator, error)
 
 NewCalculator creates a new Calculator to be used for CRC64 calculation
 
-### func \(\*Calculator\) CheckSum16
+### func \(\*Calculator\) [CheckSum16](<https://github.com/intel/ixl-go/blob/main/crc/crc.go#L129>)
 
 ```go
 func (calc *Calculator) CheckSum16(data []byte, poly uint16) (uint16, error)
@@ -84,7 +84,7 @@ func (calc *Calculator) CheckSum16(data []byte, poly uint16) (uint16, error)
 
 CheckSum16 calculates the CRC16 checksum for the given data and polynomial value
 
-### func \(\*Calculator\) CheckSum32
+### func \(\*Calculator\) [CheckSum32](<https://github.com/intel/ixl-go/blob/main/crc/crc.go#L113>)
 
 ```go
 func (calc *Calculator) CheckSum32(data []byte, poly uint32) (uint32, error)
@@ -92,7 +92,7 @@ func (calc *Calculator) CheckSum32(data []byte, poly uint32) (uint32, error)
 
 CheckSum32 calculates the CRC32 checksum for the given data and polynomial value
 
-### func \(\*Calculator\) CheckSum64
+### func \(\*Calculator\) [CheckSum64](<https://github.com/intel/ixl-go/blob/main/crc/crc.go#L97>)
 
 ```go
 func (calc *Calculator) CheckSum64(data []byte, poly uint64) (uint64, error)

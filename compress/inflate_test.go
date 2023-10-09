@@ -29,27 +29,27 @@ func TestInflate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i := 2; i <= 4096*1024; i = i * 2 {
+	max := 4096 * 1024
+	if max > int(w.ctx.MaxTransferSize()) {
+		max = int(w.ctx.MaxTransferSize())
+	}
+	for i := 2; i <= max; i = i * 2 {
 		buf.Reset()
-		text := []byte(testutil.RandomText(i))
+		source := testutil.RandomByRatio(i, 2)
 		w.Reset(buf)
-		_, err := w.ReadFrom(bytes.NewBuffer(text))
+		_, err := w.ReadFrom(bytes.NewBuffer(source))
 		if err != nil && err != io.EOF {
 			t.Fatal(err)
 		}
 		w.Close()
 		block := make([]byte, i)
-		r.Reset(buf)
-		for {
-			_, err = r.Read(block)
-			if err != nil {
-				break
-			}
-		}
+
+		n, err := r.DecompressAll(buf.Bytes(), block)
 		if err != nil && err != io.EOF {
-			t.Log(base64.StdEncoding.EncodeToString(buf.Bytes()))
-			t.Log("error:", i, buf.Len())
 			t.Fatal(err.Error(), reflect.TypeOf(err))
+		}
+		if !bytes.Equal(block[:n], source) {
+			t.Fatal("decompressed data not equals to input source")
 		}
 	}
 }
@@ -161,7 +161,7 @@ func BenchmarkInflate(b *testing.B) {
 		w, _ := NewDeflate(io.Discard)
 		buf := bytes.NewBuffer(nil)
 		buf.Reset()
-		text := []byte(testutil.RandomText(i * 1024))
+		text := testutil.RandomByRatio(i*1024, 2)
 		w.Reset(buf)
 		_, err := w.ReadFrom(bytes.NewBuffer(text))
 		if err != nil && err != io.EOF {

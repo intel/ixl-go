@@ -86,6 +86,14 @@ func (c *CompressAECS) Reset() {
 	*c = CompressAECS{}
 }
 
+// ResetKeepHistogram resets the values of CompressAECS to their zero values but keep the histogram.
+func (c *CompressAECS) ResetKeepHistogram() {
+	c.CRC = 0
+	c.XORChecksum = 0
+	c.NumAccBitsValid = 0
+	c.OutputAccumulatorData = [256]byte{}
+}
+
 // Histogram is a struct that contains the Huffman tables for compression.
 type Histogram struct {
 	LiteralCodes  [286]int32 // Literal Codes

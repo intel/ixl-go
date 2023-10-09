@@ -16,6 +16,19 @@ import (
 	"github.com/intel/ixl-go/util/mem"
 )
 
+type option struct {
+	mode     deflateMode
+	busyPoll bool // busyPoll or goroutine schedule
+}
+
+type deflateMode uint8
+
+const (
+	modeDynamic deflateMode = iota
+	modeFixed
+	modeHuffmanOnly
+)
+
 // Deflate takes data written to it and writes the deflate compressed
 // form of that data to an underlying writer (see NewDeflate).
 //
@@ -27,17 +40,18 @@ type Deflate struct {
 	w   io.Writer
 	ctx *device.Context
 
-	frame  headerFrame
+	mode     deflateMode
+	busyPoll bool
+
 	output []byte
 
-	readcache []byte
-
+	readcache       []byte
+	frame           headerFrame
 	cacheForGencode []int32
 	litGen          huffman.TreeGenerator
 	offsetGen       huffman.TreeGenerator
 	codeGen         huffman.TreeGenerator
-
-	dynHeader *dynamicHeader
+	dynHeader       *dynamicHeader
 
 	descriptor       iaa.Descriptor
 	completionRecord *iaa.CompletionRecord
@@ -55,30 +69,78 @@ type iaaCachedObject struct {
 
 type compressAECSPair [2]iaa.CompressAECS
 
+// Option type is used to configure how the library handles your compression or decompression.
+type Option func(opt *option)
+
+// FixedMode enable fixed mode to compress the data.
+func FixedMode() Option {
+	return func(opt *option) {
+		opt.mode = modeFixed
+	}
+}
+
+// DynamicMode enable dynamic mode to compress the data.
+func DynamicMode() Option {
+	return func(opt *option) {
+		opt.mode = modeDynamic
+	}
+}
+
+// HuffmanOnly enable huffman code only mode to compress the data.
+func HuffmanOnly() Option {
+	return func(opt *option) {
+		opt.mode = modeHuffmanOnly
+	}
+}
+
+// BusyPoll enable busy-poll mode to reduce the deflate latency.
+// Beware it may cause more CPU cost.
+func BusyPoll() Option {
+	return func(opt *option) {
+		opt.busyPoll = true
+	}
+}
+
 // NewDeflate returns a new Deflate writing compressed data to underlying writer `w`.
-func NewDeflate(w io.Writer) (*Deflate, error) {
+func NewDeflate(w io.Writer, opts ...Option) (*Deflate, error) {
 	ctx := iaa.LoadContext()
 
 	if ctx == nil {
 		// no device found
 		return nil, errors.NoHardwareDeviceDetected
 	}
+	opt := &option{}
+	for _, optf := range opts {
+		optf(opt)
+	}
+
 	deflate := &Deflate{
-		ctx:             ctx,
-		dynHeader:       newDynamicHeader(),
-		w:               w,
-		frame:           headerFrame{},
-		litGen:          huffman.NewLenLimitedCode(),
-		offsetGen:       huffman.NewLenLimitedCode(),
-		codeGen:         huffman.NewLenLimitedCode(),
-		descriptor:      iaa.Descriptor{},
-		cacheForGencode: make([]int32, 16*2),
+		ctx:      ctx,
+		busyPoll: opt.busyPoll,
+		mode:     opt.mode,
+		w:        w,
 		// size(block) + storedBlockHeaderSize + lastBlockBits
 		output: mem.Alloc64ByteAligned(maxBlockSize + 5 + 1),
 	}
 	ico := mem.Alloc64Align[iaaCachedObject]()
 	deflate.completionRecord = &ico.CompletionRecord
 	deflate.aecs = &ico.compressAECSPair
+	switch opt.mode {
+	case modeDynamic:
+		deflate.dynHeader = newDynamicHeader()
+		deflate.frame = headerFrame{}
+		deflate.litGen = huffman.NewLenLimitedCode()
+		deflate.offsetGen = huffman.NewLenLimitedCode()
+		deflate.codeGen = huffman.NewLenLimitedCode()
+		deflate.descriptor = iaa.Descriptor{}
+		deflate.cacheForGencode = make([]int32, 16*2)
+	case modeFixed, modeHuffmanOnly:
+		copy(deflate.aecs[0].Histogram.DistanceCodes[:], fixedHistogram.DistanceCodes[:])
+		copy(deflate.aecs[1].Histogram.DistanceCodes[:], fixedHistogram.DistanceCodes[:])
+		copy(deflate.aecs[0].Histogram.LiteralCodes[:], fixedHistogram.LiteralCodes[:])
+		copy(deflate.aecs[1].Histogram.LiteralCodes[:], fixedHistogram.LiteralCodes[:])
+	}
+
 	return deflate, nil
 }
 
@@ -96,7 +158,7 @@ const maxBlockSize = 32 * 1024
 // ReadFrom reads all data from `r` and compresses the data and then writes compressed data into underlying writer `w`.
 func (d *Deflate) ReadFrom(r io.Reader) (total int64, err error) {
 	if d.readcache == nil {
-		d.readcache = mem.Alloc64ByteAligned(maxBlockSize * 2)
+		d.readcache = make([]byte, maxBlockSize*2)
 	}
 
 	current, prev := d.readcache[:maxBlockSize], d.readcache[maxBlockSize:]
@@ -161,6 +223,11 @@ func (d *Deflate) writeBlock(block []byte, last bool) (n int, err error) {
 		err = d.writeStoredBlock(block, last)
 		return 0, err
 	}
+	switch d.mode {
+	case modeFixed, modeHuffmanOnly:
+		return d.writeFixedBlock(block, last)
+	case modeDynamic:
+	}
 
 	aecs := &d.aecs[d.toggle]
 	aecs.Reset()
@@ -186,12 +253,45 @@ func (d *Deflate) writeBlock(block []byte, last bool) (n int, err error) {
 	return len(block), err
 }
 
+func (d *Deflate) writeFixedBlock(block []byte, last bool) (n int, err error) {
+	aecs := &d.aecs[d.toggle]
+	aecs.ResetKeepHistogram()
+	d.descriptor.Reset()
+	d.completionRecord.Reset()
+
+	blockHdr := 0b010
+	if last {
+		blockHdr = 0b011
+	}
+
+	hdr := uint16(d.bits)
+	hdr |= uint16(blockHdr) << d.bitsNum
+
+	headerBits := int(3 + d.bitsNum)
+
+	binary.LittleEndian.PutUint16(aecs.OutputAccumulatorData[:], hdr)
+	// encode the block using huffman code
+	err = d.encodeBlock(aecs, block, last, headerBits)
+	if err != nil {
+		return 0, err
+	}
+	d.toggle ^= 1
+	return len(block), err
+}
+
+func (d *Deflate) submit() iaa.StatusCode {
+	ptr := (unsafe.Pointer(&d.descriptor))
+	if d.busyPoll {
+		return iaa.StatusCode(d.ctx.SubmitBusyPoll(uintptr(ptr), &d.completionRecord.Header))
+	}
+	return iaa.StatusCode(d.ctx.Submit(uintptr(ptr), &d.completionRecord.Header))
+}
+
 func (d *Deflate) statisticBlock(block []byte, histogram *iaa.Histogram) error {
 	d.descriptor.Reset()
 	d.completionRecord.Reset()
 	d.statsJob(block, histogram)
-	ptr := (unsafe.Pointer(&d.descriptor))
-	status := iaa.StatusCode(d.ctx.Submit(uintptr(ptr), &d.completionRecord.Header))
+	status := d.submit()
 	runtime.KeepAlive(histogram)
 	runtime.KeepAlive(d.completionRecord)
 	runtime.KeepAlive(d.aecs)
@@ -238,7 +338,9 @@ func (d *Deflate) encodeJob(block []byte, output []byte, aesc *iaa.CompressAECS)
 	desc.SetCompressionFlag(
 		iaa.CompressionFlagEndAppendEOB | iaa.CompressionFlagFlushOutput,
 	)
-
+	if d.mode == modeHuffmanOnly {
+		desc.AddCompressionFlag(iaa.CompressionFlagGenerateAllLiterals)
+	}
 	if len(block) == 0 {
 		block = block[:1]
 		desc.Src1Addr = uintptr(unsafe.Pointer(&block[0]))
@@ -285,7 +387,7 @@ func (d *Deflate) encodeBlock(aecs *iaa.CompressAECS, block []byte, last bool, h
 	// set prev crc result
 	aecs.CRC = d.crc
 	d.encodeJob(block, d.output, &d.aecs[0])
-	status := iaa.StatusCode(d.ctx.Submit(uintptr(unsafe.Pointer(&d.descriptor)), &d.completionRecord.Header))
+	status := d.submit()
 	if status != iaa.Success {
 		if status == iaa.OutputBufferOverflow {
 			return d.writeStoredBlock(block, last)

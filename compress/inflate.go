@@ -21,21 +21,23 @@ import (
 // This because the standard deflate's history buffer size is 32KB,
 // but the IAA deflate's history buffer size is 4KB.
 type Inflate struct {
-	ctx      *device.Context
-	buffer   []byte
-	remnant  int
-	desc     iaa.Descriptor
-	cr       *iaa.CompletionRecord
-	aecsPair *[2]iaa.DecompressAECS
-	toggle   uint8
-	state    streamState
-	r        io.Reader
-	finished bool
+	ctx           *device.Context
+	busyPoll      bool
+	buffer        []byte
+	remnant       int
+	desc          iaa.Descriptor
+	cr            *iaa.CompletionRecord
+	aecsPair      *[2]iaa.DecompressAECS
+	toggle        uint8
+	state         streamState
+	r             io.Reader
+	finished      bool
+	outputRemnant []byte
 }
 
 // NewInflate creates a new Inflate with 4KB buffer size to decompress data from reader r.
-func NewInflate(r io.Reader) (*Inflate, error) {
-	inflate, err := NewInflateWithBufferSize(r, 4096)
+func NewInflate(r io.Reader, opts ...Option) (*Inflate, error) {
+	inflate, err := NewInflateWithBufferSize(r, 4096, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -45,11 +47,16 @@ func NewInflate(r io.Reader) (*Inflate, error) {
 const minBufferSize = 8
 
 // NewInflateWithBufferSize creates a new Inflate with specified buffer size to decompress data from reader r.
-func NewInflateWithBufferSize(r io.Reader, bufferSize int) (*Inflate, error) {
+func NewInflateWithBufferSize(r io.Reader, bufferSize int, opts ...Option) (*Inflate, error) {
 	if bufferSize < minBufferSize {
 		return nil, errors.BufferSizeTooSmall
 	}
+	opt := &option{}
+	for _, f := range opts {
+		f(opt)
+	}
 	i := &Inflate{}
+	i.busyPoll = opt.busyPoll
 	i.ctx = iaa.LoadContext()
 	if i.ctx == nil {
 		return nil, errors.NoHardwareDeviceDetected
@@ -68,10 +75,46 @@ func (i *Inflate) Reset(r io.Reader) {
 	i.state = first
 	i.r = r
 	i.finished = false
+	i.outputRemnant = i.outputRemnant[:0]
+}
+
+func (i *Inflate) submit() iaa.StatusCode {
+	if i.busyPoll {
+		return iaa.StatusCode(i.ctx.SubmitBusyPoll(uintptr(unsafe.Pointer(&i.desc)), &i.cr.Header))
+	} else {
+		return iaa.StatusCode(i.ctx.Submit(uintptr(unsafe.Pointer(&i.desc)), &i.cr.Header))
+	}
+}
+
+// DecompressAll decompress all compressed data and write result into raw.
+// The caller should make sure that `raw` has enough space.
+func (i *Inflate) DecompressAll(compressed []byte, raw []byte) (int, error) {
+	if len(compressed) > int(i.ctx.MaxTransferSize()) || len(raw) > int(i.ctx.MaxTransferSize()) {
+		return 0, errors.DataSizeTooLarge
+	}
+	i.decompressJob(compressed, raw, &i.aecsPair[0])
+	status := i.submit()
+	if status != iaa.Success {
+		return 0, i.cr.CheckError()
+	}
+	runtime.KeepAlive(compressed)
+	runtime.KeepAlive(i.buffer)
+	return int(i.cr.OutputSize), nil
 }
 
 // Read decompressed data from the underlying compressed reader.
 func (i *Inflate) Read(data []byte) (n int, err error) {
+	if len(i.outputRemnant) != 0 {
+		n = copy(data, i.outputRemnant)
+		if n == len(i.outputRemnant) {
+			i.outputRemnant = i.outputRemnant[:0]
+		} else {
+			copy(i.outputRemnant, i.outputRemnant[n:])
+			i.outputRemnant = i.outputRemnant[:len(i.outputRemnant)-n]
+		}
+		return n, nil
+	}
+
 	if i.finished {
 		return 0, io.EOF
 	}
@@ -100,8 +143,9 @@ func (i *Inflate) Read(data []byte) (n int, err error) {
 		data = data[:i.ctx.MaxTransferSize()]
 	}
 	i.decompressJob(input, data, &i.aecsPair[0])
-	i.ctx.Submit(uintptr(unsafe.Pointer(&i.desc)), &i.cr.Header)
+	i.submit()
 	status := i.cr.GetHeader().StatusCode
+RETRY:
 	switch status {
 	case iaa.Success:
 		i.remnant = 0
@@ -112,6 +156,22 @@ func (i *Inflate) Read(data []byte) (n int, err error) {
 		i.remnant = len(input) - int(i.cr.Header.BytesCompleted)
 		temp := append(make([]byte, 0, i.remnant), input[i.cr.Header.BytesCompleted:]...)
 		copy(i.buffer, temp)
+		if i.cr.OutputSize == 0 {
+			// TODO: we should fix this problem!
+			if i.outputRemnant == nil {
+				i.outputRemnant = make([]byte, 258)
+			} else {
+				i.outputRemnant = i.outputRemnant[:258]
+			}
+			i.decompressJob(i.buffer[:i.remnant], i.outputRemnant, &i.aecsPair[0])
+			i.submit()
+			size := copy(data, i.outputRemnant[:i.cr.OutputSize])
+			copy(i.outputRemnant, i.outputRemnant[size:])
+			i.outputRemnant = i.outputRemnant[:int(i.cr.OutputSize)-size]
+			i.cr.OutputSize = uint32(size)
+			status = i.cr.GetHeader().StatusCode
+			goto RETRY
+		}
 	default:
 		return 0, i.cr.CheckError()
 	}

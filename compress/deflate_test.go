@@ -19,8 +19,51 @@ func TestDeflate(t *testing.T) {
 	if !Ready() {
 		t.Skip("IAA devices not found")
 	}
-	w, _ := NewDeflate(io.Discard)
+	w, _ := NewDeflate(io.Discard, HuffmanOnly())
 	buf := bytes.NewBuffer(nil)
+	for i := 2; i <= 4096*1024; i = i * 2 {
+		buf.Reset()
+		text := []byte(testutil.RandomText(i))
+		w.Reset(buf)
+		_, err := w.ReadFrom(bytes.NewBuffer(text))
+		if err != nil && err != io.EOF {
+			t.Fatal(err)
+		}
+		w.Close()
+		r := flate.NewReader(buf)
+		data, err := io.ReadAll(r)
+		r.Close()
+		if err != nil && err != io.EOF {
+			t.Fatal(err.Error(), reflect.TypeOf(err))
+		}
+		if !bytes.Equal(data, text) {
+			t.Fatal("decompressed contents should be the same")
+		}
+	}
+
+	w, _ = NewDeflate(io.Discard, FixedMode())
+	buf = bytes.NewBuffer(nil)
+	for i := 2; i <= 4096*1024; i = i * 2 {
+		buf.Reset()
+		text := []byte(testutil.RandomText(i))
+		w.Reset(buf)
+		_, err := w.ReadFrom(bytes.NewBuffer(text))
+		if err != nil && err != io.EOF {
+			t.Fatal(err)
+		}
+		w.Close()
+		r := flate.NewReader(buf)
+		_, err = r.Read(make([]byte, i*1024))
+		r.Close()
+		if err != nil && err != io.EOF {
+			t.Log(base64.StdEncoding.EncodeToString(buf.Bytes()))
+			t.Log("error:", i, buf.Len())
+			t.Fatal(err.Error(), reflect.TypeOf(err))
+		}
+	}
+
+	w, _ = NewDeflate(io.Discard)
+	buf = bytes.NewBuffer(nil)
 	for i := 2; i <= 4096*1024; i = i * 2 {
 		buf.Reset()
 		text := []byte(testutil.RandomText(i))
@@ -72,12 +115,14 @@ func BenchmarkPDeflate4k(b *testing.B) {
 	if !Ready() {
 		b.Skip("IAA devices not found")
 	}
-	text := []byte(testutil.RandomText(4 * 1024))
+	text := []byte(testutil.RandomText(32 * 1024))
 	b.RunParallel(func(p *testing.PB) {
+		i := 4 * 1024
 		w, _ := NewDeflate(io.Discard)
 		for p.Next() {
 			w.Reset(io.Discard)
-			_, _ = w.ReadFrom(bytes.NewBuffer(text))
+			i += 512
+			_, _ = w.ReadFrom(bytes.NewReader(text[:i%len(text)]))
 			w.Close()
 		}
 	})
@@ -99,6 +144,24 @@ func BenchmarkReusedRandomTextCompress(b *testing.B) {
 		})
 		w, _ := NewDeflateWriter(io.Discard)
 		b.Run(fmt.Sprintf("IAA deflate[%dk]", i), func(b *testing.B) {
+			for j := 0; j < b.N; j++ {
+				w.Reset(io.Discard)
+				_, _ = w.Write(text)
+				w.Close()
+			}
+		})
+
+		w, _ = NewDeflateWriter(io.Discard, FixedMode())
+		b.Run(fmt.Sprintf("IAA fixed deflate[%dk]", i), func(b *testing.B) {
+			for j := 0; j < b.N; j++ {
+				w.Reset(io.Discard)
+				_, _ = w.Write(text)
+				w.Close()
+			}
+		})
+
+		w, _ = NewDeflateWriter(io.Discard, FixedMode(), BusyPoll())
+		b.Run(fmt.Sprintf("IAA fixed busyPoll deflate[%dk]", i), func(b *testing.B) {
 			for j := 0; j < b.N; j++ {
 				w.Reset(io.Discard)
 				_, _ = w.Write(text)

@@ -27,7 +27,7 @@ Package filter provides some functions for processing parquet RLE or bitpacked d
 - [type Range](<#type-range>)
 
 
-## func Expand
+## func [Expand](<https://github.com/intel/ixl-go/blob/main/filter/expand.go#L14>)
 
 ```go
 func Expand[T DataUnit](s *Context, data []T, set BitSet) (result []T, err error)
@@ -35,7 +35,7 @@ func Expand[T DataUnit](s *Context, data []T, set BitSet) (result []T, err error
 
 Expand generates an array in which the elements in the data are placed according to 1 bits in the set.
 
-## func ExtractRLE
+## func [ExtractRLE](<https://github.com/intel/ixl-go/blob/main/filter/extract.go#L14>)
 
 ```go
 func ExtractRLE[T DataUnit](s *Context, size int, data []byte, r Range[uint32]) (result []T, err error)
@@ -43,7 +43,7 @@ func ExtractRLE[T DataUnit](s *Context, size int, data []byte, r Range[uint32]) 
 
 ExtractRLE extract specified range of data.
 
-## func Ready
+## func [Ready](<https://github.com/intel/ixl-go/blob/main/filter/context.go#L22>)
 
 ```go
 func Ready() bool
@@ -51,7 +51,7 @@ func Ready() bool
 
 Ready returns true if the device is ready
 
-## func Select
+## func [Select](<https://github.com/intel/ixl-go/blob/main/filter/select.go#L12>)
 
 ```go
 func Select[T DataUnit](s *Context, data []T, set BitSet) (result []T, err error)
@@ -59,7 +59,7 @@ func Select[T DataUnit](s *Context, data []T, set BitSet) (result []T, err error
 
 Select selects the elements in the data whose indices correspond to 1\-bits in the set
 
-## type BitSet
+## type [BitSet](<https://github.com/intel/ixl-go/blob/main/filter/bitset.go#L26>)
 
 BitSet is a fixed\-size collection of bits that can be manipulated individually. It is a data structure that is used to represent a set of elements, where each element is represented by a single bit.
 
@@ -67,7 +67,7 @@ BitSet is a fixed\-size collection of bits that can be manipulated individually.
 type BitSet []byte
 ```
 
-### func Scan
+### func [Scan](<https://github.com/intel/ixl-go/blob/main/filter/scan.go#L15>)
 
 ```go
 func Scan[R DataUnit](s *Context, input []R, r Range[R]) (output BitSet, err error)
@@ -75,7 +75,7 @@ func Scan[R DataUnit](s *Context, input []R, r Range[R]) (output BitSet, err err
 
 Scan scans the input for values within the specified range
 
-### func \(BitSet\) OnesCount
+### func \(BitSet\) [OnesCount](<https://github.com/intel/ixl-go/blob/main/filter/bitset.go#L29>)
 
 ```go
 func (b BitSet) OnesCount() int
@@ -83,7 +83,7 @@ func (b BitSet) OnesCount() int
 
 OnesCount returns the number of one bits \("population count"\) in b.
 
-### func \(BitSet\) Size
+### func \(BitSet\) [Size](<https://github.com/intel/ixl-go/blob/main/filter/bitset.go#L47>)
 
 ```go
 func (b BitSet) Size() int
@@ -91,7 +91,7 @@ func (b BitSet) Size() int
 
 Size return the min bitset size
 
-### func \(BitSet\) String
+### func \(BitSet\) [String](<https://github.com/intel/ixl-go/blob/main/filter/bitset.go#L60>)
 
 ```go
 func (b BitSet) String() string
@@ -99,7 +99,7 @@ func (b BitSet) String() string
 
 String returns a string representation of the bit set
 
-## type Context
+## type [Context](<https://github.com/intel/ixl-go/blob/main/filter/context.go#L14-L19>)
 
 Context is used to store filters state.
 
@@ -109,7 +109,7 @@ type Context struct {
 }
 ```
 
-### func NewContext
+### func [NewContext](<https://github.com/intel/ixl-go/blob/main/filter/context.go#L27>)
 
 ```go
 func NewContext() (*Context, error)
@@ -117,7 +117,7 @@ func NewContext() (*Context, error)
 
 NewContext returns a new context
 
-### func \(\*Context\) ScanBitPacking
+### func \(\*Context\) [ScanBitPacking](<https://github.com/intel/ixl-go/blob/main/filter/scan.go#L39>)
 
 ```go
 func (s *Context) ScanBitPacking(r Range[uint32], w int, size int, data []byte) (output BitSet, err error)
@@ -125,7 +125,7 @@ func (s *Context) ScanBitPacking(r Range[uint32], w int, size int, data []byte) 
 
 ScanBitPacking scans the input using bit packing
 
-### func \(\*Context\) ScanRLE
+### func \(\*Context\) [ScanRLE](<https://github.com/intel/ixl-go/blob/main/filter/scan.go#L61>)
 
 ```go
 func (s *Context) ScanRLE(r Range[uint32], size int, data []byte) (output BitSet, err error)
@@ -133,7 +133,7 @@ func (s *Context) ScanRLE(r Range[uint32], size int, data []byte) (output BitSet
 
 ScanRLE scans the input using run\-length encoding
 
-## type DataUnit
+## type [DataUnit](<https://github.com/intel/ixl-go/blob/main/filter/bitset.go#L14-L16>)
 
 DataUnit represents a type that can be used in filter operations
 
@@ -143,7 +143,7 @@ type DataUnit interface {
 }
 ```
 
-## type Range
+## type [Range](<https://github.com/intel/ixl-go/blob/main/filter/bitset.go#L19-L21>)
 
 Range represents a range of values
 

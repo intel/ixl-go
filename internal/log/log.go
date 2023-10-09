@@ -40,7 +40,7 @@ func Debug(format string, args ...interface{}) {
 
 // Info prints info level logs
 func Info(format string, args ...interface{}) {
-	if level >= lvlDebug {
+	if level >= lvlInfo {
 		log.Printf("[ixl-go]INFO "+format, args...)
 	}
 }

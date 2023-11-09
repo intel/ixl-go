@@ -6,7 +6,6 @@ package compress
 import (
 	"bytes"
 	"compress/flate"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"reflect"
@@ -15,11 +14,7 @@ import (
 	"github.com/intel/ixl-go/internal/testutil"
 )
 
-func TestDeflate(t *testing.T) {
-	if !Ready() {
-		t.Skip("IAA devices not found")
-	}
-	w, _ := NewDeflate(io.Discard, HuffmanOnly())
+func testDeflate(t *testing.T, w *Deflate) {
 	buf := bytes.NewBuffer(nil)
 	for i := 2; i <= 4096*1024; i = i * 2 {
 		buf.Reset()
@@ -40,48 +35,20 @@ func TestDeflate(t *testing.T) {
 			t.Fatal("decompressed contents should be the same")
 		}
 	}
+}
 
+func TestDeflate(t *testing.T) {
+	if !Ready() {
+		t.Skip("IAA devices not found")
+	}
+	w, _ := NewDeflate(io.Discard, HuffmanOnly())
+	testDeflate(t, w)
 	w, _ = NewDeflate(io.Discard, FixedMode())
-	buf = bytes.NewBuffer(nil)
-	for i := 2; i <= 4096*1024; i = i * 2 {
-		buf.Reset()
-		text := []byte(testutil.RandomText(i))
-		w.Reset(buf)
-		_, err := w.ReadFrom(bytes.NewBuffer(text))
-		if err != nil && err != io.EOF {
-			t.Fatal(err)
-		}
-		w.Close()
-		r := flate.NewReader(buf)
-		_, err = r.Read(make([]byte, i*1024))
-		r.Close()
-		if err != nil && err != io.EOF {
-			t.Log(base64.StdEncoding.EncodeToString(buf.Bytes()))
-			t.Log("error:", i, buf.Len())
-			t.Fatal(err.Error(), reflect.TypeOf(err))
-		}
-	}
-
+	testDeflate(t, w)
 	w, _ = NewDeflate(io.Discard)
-	buf = bytes.NewBuffer(nil)
-	for i := 2; i <= 4096*1024; i = i * 2 {
-		buf.Reset()
-		text := []byte(testutil.RandomText(i))
-		w.Reset(buf)
-		_, err := w.ReadFrom(bytes.NewBuffer(text))
-		if err != nil && err != io.EOF {
-			t.Fatal(err)
-		}
-		w.Close()
-		r := flate.NewReader(buf)
-		_, err = r.Read(make([]byte, i*1024))
-		r.Close()
-		if err != nil && err != io.EOF {
-			t.Log(base64.StdEncoding.EncodeToString(buf.Bytes()))
-			t.Log("error:", i, buf.Len())
-			t.Fatal(err.Error(), reflect.TypeOf(err))
-		}
-	}
+	testDeflate(t, w)
+	w, _ = NewDeflate(io.Discard, BusyPoll())
+	testDeflate(t, w)
 }
 
 func FuzzDeflate(f *testing.F) {

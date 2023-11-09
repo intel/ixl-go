@@ -126,7 +126,7 @@ func NewDeflate(w io.Writer, opts ...Option) (*Deflate, error) {
 	deflate.completionRecord = &ico.CompletionRecord
 	deflate.aecs = &ico.compressAECSPair
 	switch opt.mode {
-	case modeDynamic:
+	case modeDynamic, modeHuffmanOnly:
 		deflate.dynHeader = newDynamicHeader()
 		deflate.frame = headerFrame{}
 		deflate.litGen = huffman.NewLenLimitedCode()
@@ -134,7 +134,7 @@ func NewDeflate(w io.Writer, opts ...Option) (*Deflate, error) {
 		deflate.codeGen = huffman.NewLenLimitedCode()
 		deflate.descriptor = iaa.Descriptor{}
 		deflate.cacheForGencode = make([]int32, 16*2)
-	case modeFixed, modeHuffmanOnly:
+	case modeFixed:
 		copy(deflate.aecs[0].Histogram.DistanceCodes[:], fixedHistogram.DistanceCodes[:])
 		copy(deflate.aecs[1].Histogram.DistanceCodes[:], fixedHistogram.DistanceCodes[:])
 		copy(deflate.aecs[0].Histogram.LiteralCodes[:], fixedHistogram.LiteralCodes[:])
@@ -224,9 +224,9 @@ func (d *Deflate) writeBlock(block []byte, last bool) (n int, err error) {
 		return 0, err
 	}
 	switch d.mode {
-	case modeFixed, modeHuffmanOnly:
+	case modeFixed:
 		return d.writeFixedBlock(block, last)
-	case modeDynamic:
+	case modeDynamic, modeHuffmanOnly:
 	}
 
 	aecs := &d.aecs[d.toggle]
@@ -313,6 +313,9 @@ func (d *Deflate) statsJob(block []byte, histogram *iaa.Histogram) {
 			iaa.FlagCompletionRecordValid)
 
 	desc.SetCompressionFlag(iaa.CompressionFlagStatsMode | iaa.CompressionFlagEndAppendEOB)
+	if d.mode == modeHuffmanOnly {
+		desc.AddCompressionFlag(iaa.CompressionFlagGenerateAllLiterals)
+	}
 	desc.Src1Addr = uintptr(unsafe.Pointer(&block[0]))
 	desc.Size = uint32(len(block))
 	desc.DestAddr = uintptr(unsafe.Pointer(histogram))

@@ -23,7 +23,7 @@ func AvailableWorkQueues(typ DeviceType) []*WorkQueue {
 		if err != nil {
 			continue
 		}
-		// try to open workqueue file
+		// try to open workqueue files
 		fd, err := syscall.Open(wq.DevicePath(), syscall.O_RDWR, 0)
 		if err != nil {
 			continue
@@ -41,7 +41,7 @@ type (
 	Engine    = config.Engine
 )
 
-// DeviceType is a type of device.
+// DeviceType is the type of device.
 type DeviceType = config.DeviceType
 
 const (

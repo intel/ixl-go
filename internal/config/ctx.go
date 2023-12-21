@@ -64,7 +64,7 @@ func (c *Context) DedicatedWQs(typ DeviceType) []*WorkQueue {
 	return results
 }
 
-// WorkQueues returns the dedicated work queues of the specified device type.
+// WorkQueues returns the work queues of the specified device type.
 func (c *Context) WorkQueues(typ DeviceType) []*WorkQueue {
 	results := []*WorkQueue{}
 	for _, d := range c.Devices {

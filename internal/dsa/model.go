@@ -74,3 +74,58 @@ func (r *CompletionRecord) CheckError() error {
 	}
 	return errors.HardwareError{Status: StatusCode(h.Status()).String()}
 }
+
+type CRCDescriptor struct {
+	Header         uint32  `bf:"pasid 20;reversed 11;priv 1"` // Header of the descriptor.
+	FlagsAndOpCode uint32  `bf:"flags 24;opcode 8"`           // Flags and opcode of the descriptor.
+	CompletionAddr uintptr // Completion address
+	SrcAddr        uintptr // Source address
+	_              uintptr // Destination address
+	Size           uint32  // Transfer Size
+	IntHandle      uint16  // Interrupt handle
+	_              uint16  // Reserved field
+	CRCSeed        uint64  // CRC Seed
+	CRCSeedAddress uint64  // CRC Seed Address
+	_              [8]byte // Reserved field
+}
+
+// GetFlags returns the flags of a descriptor.
+func (d CRCDescriptor) GetFlags() Flag { return Flag(d.FlagsAndOpCode<<8) >> 8 }
+
+// SetFlags sets the flags of a descriptor.
+func (d *CRCDescriptor) SetFlags(value Flag) {
+	left := (d.FlagsAndOpCode >> 24) << 24
+	d.FlagsAndOpCode = left | uint32(value)
+}
+
+// GetOpcode returns the opcode of a descriptor.
+func (d CRCDescriptor) GetOpcode() Opcode { return Opcode(d.FlagsAndOpCode >> 24) }
+
+// SetOpcode sets the opcode of a descriptor.
+func (d *CRCDescriptor) SetOpcode(value Opcode) {
+	right := (d.FlagsAndOpCode << (32 - 24)) >> (32 - 24)
+	d.FlagsAndOpCode = (uint32(value) << 24) | right
+}
+
+// CRCCompletionRecord is a structure defining a DSA CRC completion record.
+type CRCCompletionRecord struct {
+	Header    uint64  // Header of the completion record.
+	FaultAddr uintptr // Fault address of the completion record.
+	CRCValue  uint64
+	_         [8]uint8 // Record of the completion record.
+}
+
+// GetHeader returns the header of a completion record.
+func (r *CRCCompletionRecord) GetHeader() *device.CompletionRecordHeader {
+	return (*device.CompletionRecordHeader)(unsafe.Pointer(&r.Header))
+}
+
+// CheckError checks if error happened, and return wrapped error or nil
+func (r *CRCCompletionRecord) CheckError() error {
+	h := r.GetHeader()
+	status := h.Status()
+	if status == uint8(StatusSuccess) {
+		return nil
+	}
+	return errors.HardwareError{Status: StatusCode(h.Status()).String()}
+}

@@ -19,7 +19,7 @@ const (
 	opFlagReqCompIntr  Flag = 0x0010
 	opFlagCrsts        Flag = 0x0020
 	opFlagCr           Flag = 0x0080
-	opFlagCacheControl Flag = 0x0100
+	OpFlagCacheControl Flag = 0x0100
 	opFlagAddr1Tcs     Flag = 0x0200
 	opFlagAddr2Tcs     Flag = 0x0400
 	opFlagAddr3Tcs     Flag = 0x0800
@@ -27,6 +27,8 @@ const (
 	opFlagStord        Flag = 0x2000
 	opFlagDrdbk        Flag = 0x4000
 	opFlagDsts         Flag = 0x8000
+	OpFlagReadCRCSeed  Flag = 0x1 << 15
+	OpFlagCRCSize64    Flag = 0b1 << 18
 )
 
 // Opcode specifies the operation to be executed
@@ -48,6 +50,7 @@ const (
 	OpcodeCreateDeltaRecord Opcode = 0x07
 	OpcodeApplyDeltaRecord  Opcode = 0x08
 	OpcodeCopyWithDualcast  Opcode = 0x09
+	OpcodeCRCGen            Opcode = 0x10
 )
 
 // const (

@@ -11,15 +11,27 @@ Package crc provides CRC calculation functions which leverage IAA hardware.
 ## Index
 
 - [Constants](<#constants>)
-- [func Ready() bool](<#func-ready>)
-- [type Calculator](<#type-calculator>)
-  - [func NewCalculator() (*Calculator, error)](<#func-newcalculator>)
-  - [func (calc *Calculator) CheckSum16(data []byte, poly uint16) (uint16, error)](<#func-calculator-checksum16>)
-  - [func (calc *Calculator) CheckSum32(data []byte, poly uint32) (uint32, error)](<#func-calculator-checksum32>)
-  - [func (calc *Calculator) CheckSum64(data []byte, poly uint64) (uint64, error)](<#func-calculator-checksum64>)
+- [func Ready\(\) bool](<#Ready>)
+- [func YieldProcessor\(c \*CRC32C\)](<#YieldProcessor>)
+- [type CRC32C](<#CRC32C>)
+  - [func NewCRC32C\(opts ...CRC32COption\) \(\*CRC32C, error\)](<#NewCRC32C>)
+  - [func \(c \*CRC32C\) BlockSize\(\) int](<#CRC32C.BlockSize>)
+  - [func \(c \*CRC32C\) Reset\(\)](<#CRC32C.Reset>)
+  - [func \(c \*CRC32C\) Size\(\) int](<#CRC32C.Size>)
+  - [func \(c \*CRC32C\) Sum\(b \[\]byte\) \[\]byte](<#CRC32C.Sum>)
+  - [func \(c \*CRC32C\) Sum32\(\) uint32](<#CRC32C.Sum32>)
+  - [func \(c \*CRC32C\) Write\(data \[\]byte\) \(n int, err error\)](<#CRC32C.Write>)
+- [type CRC32COption](<#CRC32COption>)
+- [type Calculator](<#Calculator>)
+  - [func NewCalculator\(\) \(\*Calculator, error\)](<#NewCalculator>)
+  - [func \(calc \*Calculator\) CheckSum16\(data \[\]byte, poly uint16\) \(uint16, error\)](<#Calculator.CheckSum16>)
+  - [func \(calc \*Calculator\) CheckSum32\(data \[\]byte, poly uint32\) \(uint32, error\)](<#Calculator.CheckSum32>)
+  - [func \(calc \*Calculator\) CheckSum64\(data \[\]byte, poly uint64\) \(uint64, error\)](<#Calculator.CheckSum64>)
 
 
 ## Constants
+
+<a name="ISO"></a>
 
 ```go
 const (
@@ -29,6 +41,8 @@ const (
     ECMA uint64 = 0xC96C5795D7870F42
 )
 ```
+
+<a name="IEEE"></a>
 
 ```go
 const (
@@ -41,6 +55,8 @@ const (
 )
 ```
 
+<a name="CCITT"></a>
+
 ```go
 const (
     // CCITT polynomial value
@@ -50,6 +66,7 @@ const (
 )
 ```
 
+<a name="Ready"></a>
 ## func [Ready](<https://github.com/intel/ixl-go/blob/main/crc/ctx.go#L11>)
 
 ```go
@@ -58,6 +75,99 @@ func Ready() bool
 
 Ready returns true if the device is ready for use.
 
+<a name="YieldProcessor"></a>
+## func [YieldProcessor](<https://github.com/intel/ixl-go/blob/main/crc/dsa.go#L34>)
+
+```go
+func YieldProcessor(c *CRC32C)
+```
+
+YieldProcessor yields the processor while submitting the CRC job to hardware, instead of busy polling the result.
+
+<a name="CRC32C"></a>
+## type [CRC32C](<https://github.com/intel/ixl-go/blob/main/crc/dsa.go#L41-L46>)
+
+CRC32C represents a CRC32C calculator. This calculator uses Castagnoli's polynomial, which is widely used in iSCSI. The calculator is compliant with the hash.Hash32 interface.
+
+```go
+type CRC32C struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewCRC32C"></a>
+### func [NewCRC32C](<https://github.com/intel/ixl-go/blob/main/crc/dsa.go#L21>)
+
+```go
+func NewCRC32C(opts ...CRC32COption) (*CRC32C, error)
+```
+
+NewCRC32C function initializes a new CRC32C hasher. This hasher is compliant with the hash.Hash32 interface. Returns an error if no hardware device is detected \(Intel® DSA\).
+
+<a name="CRC32C.BlockSize"></a>
+### func \(\*CRC32C\) [BlockSize](<https://github.com/intel/ixl-go/blob/main/crc/dsa.go#L123>)
+
+```go
+func (c *CRC32C) BlockSize() int
+```
+
+BlockSize returns the hash's underlying block size. The Write method must be able to accept any amount of data, but it may operate more efficiently if all writes are a multiple of the block size.
+
+<a name="CRC32C.Reset"></a>
+### func \(\*CRC32C\) [Reset](<https://github.com/intel/ixl-go/blob/main/crc/dsa.go#L109>)
+
+```go
+func (c *CRC32C) Reset()
+```
+
+Reset resets the Hash to its initial state.
+
+<a name="CRC32C.Size"></a>
+### func \(\*CRC32C\) [Size](<https://github.com/intel/ixl-go/blob/main/crc/dsa.go#L115>)
+
+```go
+func (c *CRC32C) Size() int
+```
+
+Size returns the number of bytes Sum will return.
+
+<a name="CRC32C.Sum"></a>
+### func \(\*CRC32C\) [Sum](<https://github.com/intel/ixl-go/blob/main/crc/dsa.go#L103>)
+
+```go
+func (c *CRC32C) Sum(b []byte) []byte
+```
+
+Sum appends the current hash to b and returns the resulting slice. It does not change the underlying hash state.
+
+<a name="CRC32C.Sum32"></a>
+### func \(\*CRC32C\) [Sum32](<https://github.com/intel/ixl-go/blob/main/crc/dsa.go#L127>)
+
+```go
+func (c *CRC32C) Sum32() uint32
+```
+
+
+
+<a name="CRC32C.Write"></a>
+### func \(\*CRC32C\) [Write](<https://github.com/intel/ixl-go/blob/main/crc/dsa.go#L54>)
+
+```go
+func (c *CRC32C) Write(data []byte) (n int, err error)
+```
+
+
+
+<a name="CRC32COption"></a>
+## type [CRC32COption](<https://github.com/intel/ixl-go/blob/main/crc/dsa.go#L31>)
+
+
+
+```go
+type CRC32COption func(c *CRC32C)
+```
+
+<a name="Calculator"></a>
 ## type [Calculator](<https://github.com/intel/ixl-go/blob/main/crc/crc.go#L40-L44>)
 
 Calculator is used for CRC64 calculation Notice: the data size should be less than your device's max\_transfer\_size.
@@ -68,6 +178,7 @@ type Calculator struct {
 }
 ```
 
+<a name="NewCalculator"></a>
 ### func [NewCalculator](<https://github.com/intel/ixl-go/blob/main/crc/crc.go#L47>)
 
 ```go
@@ -76,6 +187,7 @@ func NewCalculator() (*Calculator, error)
 
 NewCalculator creates a new Calculator to be used for CRC64 calculation
 
+<a name="Calculator.CheckSum16"></a>
 ### func \(\*Calculator\) [CheckSum16](<https://github.com/intel/ixl-go/blob/main/crc/crc.go#L129>)
 
 ```go
@@ -84,6 +196,7 @@ func (calc *Calculator) CheckSum16(data []byte, poly uint16) (uint16, error)
 
 CheckSum16 calculates the CRC16 checksum for the given data and polynomial value
 
+<a name="Calculator.CheckSum32"></a>
 ### func \(\*Calculator\) [CheckSum32](<https://github.com/intel/ixl-go/blob/main/crc/crc.go#L113>)
 
 ```go
@@ -92,6 +205,7 @@ func (calc *Calculator) CheckSum32(data []byte, poly uint32) (uint32, error)
 
 CheckSum32 calculates the CRC32 checksum for the given data and polynomial value
 
+<a name="Calculator.CheckSum64"></a>
 ### func \(\*Calculator\) [CheckSum64](<https://github.com/intel/ixl-go/blob/main/crc/crc.go#L97>)
 
 ```go
@@ -99,7 +213,5 @@ func (calc *Calculator) CheckSum64(data []byte, poly uint64) (uint64, error)
 ```
 
 CheckSum64 calculates the CRC64 checksum for the given data and polynomial value
-
-
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)

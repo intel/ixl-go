@@ -157,7 +157,7 @@ datamove.Copy(output, input)
 | module   | doc                           | accelerator | 
 | -------- | ----------------------------- | ----------- |
 | compress | [compress](./compress/doc.md) | IAA         |
-| crc      | [crc](./crc/doc.md)           | IAA         |
+| crc      | [crc](./crc/doc.md)           | IAA/DSA         |
 | filter   | [filter](./filter/doc.md)     | IAA         |
 | datamove | [datamove](./datamove/doc.md) | DSA         |
 | util/mem | [util/mem](./util/mem/doc.md) | _           |

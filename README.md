@@ -87,26 +87,38 @@ func main() {
 	if *f == "" {
 		log.Fatalln("must give a file to compress")
 	}
-	// gzip example:
-	file, err := os.Open(*f)
+
+	gzipExample(*f)
+	deflateExample(*f)
+}
+
+// gzip example:
+func gzipExample(filename string) {
+	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatalln("open file failed:", err)
 	}
-	output, err := os.Create(*f + ".gz")
+	defer file.Close()
+
+	output, err := os.Create(filename + ".gz")
 	if err != nil {
 		log.Fatalln("create file failed:", err)
 	}
+	defer output.Close()
+
 	w := compress.NewGzip(output)
 	w.ReadFrom(file)
 	w.Close()
-	file.Close()
-	output.Close()
+}
 
-	// deflate example:
-	file, err = os.Open(*f)
+// deflate example:
+func deflateExample(filename string) {
+	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatalln("open file failed:", err)
 	}
+	defer file.Close()
+
 	buf := bytes.NewBuffer(nil)
 	d, err := compress.NewDeflate(buf)
 	if err != nil {
@@ -115,8 +127,12 @@ func main() {
 	d.ReadFrom(file)
 	d.Close()
 
-	// inflate example
-	i, err := compress.NewInflate(buf)
+	inflateExample(buf)
+}
+
+// inflate example:
+func inflateExample(r io.Reader) {
+	i, err := compress.NewInflate(r)
 	if err != nil {
 		log.Fatalln("NewInflate failed:", err)
 	}
